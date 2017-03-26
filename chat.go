@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"os"
 	"strings"
 )
 
@@ -140,9 +139,24 @@ func runClient(serverAddress string, name string) {
 		writer.WriteString("name:" + name + "\n")
 		writer.Flush()
 	}
+
+	var window ChatWindow
+	sendChannel := make(chan string)
+
+	onInput := func(input string) {
+		// send input to the chatServer
+		//window.AddMessage("Bobby", input)
+		sendChannel <- input
+	}
+
+	onClose := func() {
+		close(sendChannel)
+		window.Close()
+	}
+
+	window.Start(onInput, onClose)
+
 	receiveChannel := startReader(bufio.NewReader(connection))
-	stdinReader := bufio.NewReader(os.Stdin)
-	sendChannel := startReader(stdinReader)
 
 	for {
 		select {
@@ -151,7 +165,12 @@ func runClient(serverAddress string, name string) {
 				// server disconnected
 				return
 			}
-			fmt.Printf(message)
+			splitMessage := strings.SplitN(message, ":", 2)
+			if len(splitMessage) > 1 {
+				window.AddMessage(splitMessage[0], splitMessage[1])
+			} else {
+				window.AddMessage("", splitMessage[0])
+			}
 		case toSend, gotData := <-sendChannel:
 			if !gotData {
 				// stdin closed?

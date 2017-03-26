@@ -3,6 +3,8 @@ package main
 import ui "github.com/gizak/termui"
 
 type OnInputFn func(message string)
+type OnCloseFn func()
+
 type ChatWindow struct {
 	messages      [][]string
 	messageWindow *ui.Table
@@ -38,7 +40,7 @@ func (chat *ChatWindow) AddMessage(user string, message string) {
 	ui.Render(chat.messageWindow)
 }
 
-func (chat *ChatWindow) Start(onInput OnInputFn) {
+func (chat *ChatWindow) Start(onInput OnInputFn, onClose OnCloseFn) {
 	if err := ui.Init(); err != nil {
 		panic(err)
 	}
@@ -46,11 +48,7 @@ func (chat *ChatWindow) Start(onInput OnInputFn) {
 	ui.Handle("/sys/kbd/<escape>", func(ui.Event) {
 		// quit
 		ui.StopLoop()
-	})
-
-	ui.Handle("/sys/kbd/C-q", func(ui.Event) {
-		// quit
-		ui.StopLoop()
+		onClose()
 	})
 
 	// try to make a table with one row per message
@@ -106,14 +104,11 @@ func (chat *ChatWindow) Start(onInput OnInputFn) {
 		}
 	})
 
-	defer ui.Close()
-	ui.Loop()
+	go func() {
+		ui.Loop()
+	}()
 }
 
-func main() {
-	var chat ChatWindow
-	onInput := func(input string) {
-		chat.AddMessage("Bobby", input)
-	}
-	chat.Start(onInput)
+func (chat *ChatWindow) Close() {
+	ui.Close()
 }
