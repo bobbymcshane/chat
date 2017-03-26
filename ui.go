@@ -8,11 +8,10 @@ type OnCloseFn func()
 type ChatWindow struct {
 	messages      [][]string
 	messageWindow *ui.Table
+	scrolledRows  int
 }
 
-func (chat *ChatWindow) AddMessage(user string, message string) {
-	row := []string{user, message}
-	chat.messages = append(chat.messages, row)
+func (chat *ChatWindow) Height() int {
 	numRows := chat.messageWindow.Height
 	if chat.messageWindow.Border {
 		// subtract two for the border
@@ -23,6 +22,11 @@ func (chat *ChatWindow) AddMessage(user string, message string) {
 		// divide by two for our separators
 		numRows /= 2
 	}
+	return numRows
+}
+
+func (chat *ChatWindow) renderMessages() {
+	numRows := chat.Height()
 
 	chat.messageWindow.FgColors = make([]ui.Attribute, numRows)
 	chat.messageWindow.BgColors = make([]ui.Attribute, numRows)
@@ -31,13 +35,19 @@ func (chat *ChatWindow) AddMessage(user string, message string) {
 		chat.messageWindow.BgColors[i] = chat.messageWindow.BgColor
 	}
 	numMessages := len(chat.messages)
-	firstCut := 0
-	if numMessages > numRows {
-		firstCut = numMessages - numRows
+	firstCut := numMessages - numRows - chat.scrolledRows
+	if firstCut < 0 {
+		firstCut = 0
 	}
 
-	chat.messageWindow.Rows = chat.messages[firstCut:numMessages]
+	chat.messageWindow.Rows = chat.messages[firstCut : numMessages-chat.scrolledRows]
 	ui.Render(chat.messageWindow)
+}
+
+func (chat *ChatWindow) AddMessage(user string, message string) {
+	row := []string{user, message}
+	chat.messages = append(chat.messages, row)
+	chat.renderMessages()
 }
 
 func (chat *ChatWindow) Start(onInput OnInputFn, onClose OnCloseFn) {
@@ -76,11 +86,27 @@ func (chat *ChatWindow) Start(onInput OnInputFn, onClose OnCloseFn) {
 	ui.Render(inputBox)
 
 	ui.Handle("/sys/kbd/<enter>", func(ui.Event) {
-		// TODO: send input to chat server
 		onInput(inputBox.Text)
 
 		inputBox.Text = ""
 		ui.Render(inputBox)
+	})
+
+	ui.Handle("/sys/kbd/<up>", func(ui.Event) {
+		// scroll up
+		if chat.scrolledRows < (len(chat.messages) - chat.Height()) {
+			chat.scrolledRows += 1
+			chat.renderMessages()
+		}
+	})
+
+	ui.Handle("/sys/kbd/<down>", func(ui.Event) {
+		// scroll down
+		chat.scrolledRows -= 1
+		if chat.scrolledRows < 0 {
+			chat.scrolledRows = 0
+		}
+		chat.renderMessages()
 	})
 
 	ui.Handle("/sys/kbd/C-8", func(ui.Event) {
