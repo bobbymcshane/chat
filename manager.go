@@ -13,12 +13,95 @@ const (
 	vertical    = iota
 )
 
+type direction int
+
+const (
+	up    = iota
+	down  = iota
+	left  = iota
+	right = iota
+	in    = iota
+	out   = iota
+)
+
 type pane struct {
 }
 
 type container struct {
-	orientation int // unspecified, horizontal, vertical
+	orientation orientation // unspecified, horizontal, vertical
+	focused     bool
 	containers  []*container
+	parent      *container
+}
+
+func (container *container) Focus(d direction) *container {
+	if !container.focused {
+		panic("container not focused")
+	}
+
+	toFocus := container
+	switch d {
+	case in:
+		if len(container.containers) > 0 {
+			toFocus = container.containers[0]
+		}
+	case out:
+		if container.parent != nil {
+			toFocus = container.parent
+		}
+	case down:
+		if container.parent != nil && container.parent.orientation == horizontal {
+			for i, c := range container.parent.containers {
+				if c == container {
+					if i+1 < len(container.parent.containers) {
+						toFocus = container.parent.containers[i+1]
+					}
+
+					break
+				}
+			}
+		}
+	case up:
+		if container.parent != nil && container.parent.orientation == horizontal {
+			for i, c := range container.parent.containers {
+				if c == container {
+					if i > 0 {
+						toFocus = container.parent.containers[i-1]
+					}
+					break
+				}
+			}
+		}
+	case left:
+		if container.parent != nil && container.parent.orientation == vertical {
+			for i, c := range container.parent.containers {
+				if c == container {
+					if i > 0 {
+						toFocus = container.parent.containers[i-1]
+					}
+					break
+				}
+			}
+		}
+	case right:
+		if container.parent != nil && container.parent.orientation == vertical {
+			for i, c := range container.parent.containers {
+				if c == container {
+					if i+1 < len(container.parent.containers) {
+						toFocus = container.parent.containers[i+1]
+					}
+
+					break
+				}
+			}
+		}
+	}
+
+	if toFocus != container {
+		container.focused = false
+		toFocus.focused = true
+	}
+	return toFocus
 }
 
 func sliceView(startX, startY, width, height int, cells [][]termbox.Cell) [][]termbox.Cell {
@@ -49,9 +132,17 @@ func drawHorizontalView(container *container, cells [][]termbox.Cell) {
 		return
 	} else if numContainers == 0 {
 		// TODO: draw buffer
-		for y := range cells {
-			for x, _ := range cells[y] {
-				cells[y][x] = termbox.Cell{'h', termbox.ColorWhite, termbox.ColorBlack}
+		if container.focused {
+			for x, c := range "focused" {
+				cells[0][x] = termbox.Cell{c, termbox.ColorWhite, termbox.ColorBlack}
+			}
+		} else {
+			if container.orientation == horizontal {
+				for y := range cells {
+					for x := range cells[y] {
+						cells[y][x] = termbox.Cell{'h', termbox.ColorWhite, termbox.ColorBlack}
+					}
+				}
 			}
 		}
 		return
@@ -97,9 +188,17 @@ func drawVerticalView(container *container, cells [][]termbox.Cell) {
 		return
 	} else if numContainers == 0 {
 		// TODO: draw buffer
-		for y := range cells {
-			for x, _ := range cells[y] {
-				cells[y][x] = termbox.Cell{'v', termbox.ColorWhite, termbox.ColorBlack}
+		if container.focused {
+			for x, c := range "focused" {
+				cells[0][x] = termbox.Cell{c, termbox.ColorWhite, termbox.ColorBlack}
+			}
+		} else {
+			if container.orientation == vertical {
+				for y := range cells {
+					for x, _ := range cells[y] {
+						cells[y][x] = termbox.Cell{'v', termbox.ColorWhite, termbox.ColorBlack}
+					}
+				}
 			}
 		}
 		return
@@ -124,6 +223,21 @@ func drawVerticalView(container *container, cells [][]termbox.Cell) {
 
 		c.draw(sliceView(dividerX, 0, cWidth, viewHeight, cells))
 		dividerX += cWidth
+	}
+}
+
+// create a new container inside of parent
+func (parent *container) newContainer(o orientation) {
+	numContainers := 1
+	if len(parent.containers) == 0 {
+		// make two containers if we are making the first container in a container
+		numContainers++
+	}
+	for i := 0; i < numContainers; i++ {
+		newContainer := &container{}
+		newContainer.orientation = o
+		newContainer.parent = parent
+		parent.containers = append(parent.containers, newContainer)
 	}
 }
 
@@ -171,12 +285,18 @@ func main() {
 
 	termbox.SetInputMode(termbox.InputEsc | termbox.InputMouse)
 	termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
-	var containers []*container
+
+	layout := container{}
 	for i := 0; i < 3; i++ {
-		containers = append(containers, &container{horizontal, nil})
+		layout.newContainer(vertical)
+	}
+	// focus first container at lowest level
+	focused := layout.containers[0]
+	for ; len(focused.containers) > 0; focused = focused.containers[0] {
 	}
 
-	layout := container{horizontal, containers}
+	focused.focused = true
+
 	// TODO: draw windows here
 	layout.draw(getBuffer())
 
@@ -187,13 +307,32 @@ func main() {
 			switch ev.Ch {
 			case 'q':
 				return
-			case 'n':
-				layout.containers[0].containers = append(layout.containers[0].containers, &container{})
-				termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
-				layout.draw(getBuffer())
-				termbox.Flush()
-				break
+			case 'c':
+				focused.newContainer(unspecified)
+			case 'i':
+				focused = focused.Focus(in)
+			case 'o':
+				focused = focused.Focus(out)
+			case 'h':
+				focused = focused.Focus(left)
+			case 'j':
+				focused = focused.Focus(down)
+			case 'k':
+				focused = focused.Focus(up)
+			case 'l':
+				focused = focused.Focus(right)
+			case 0:
+				switch ev.Key {
+				case termbox.KeyCtrlV:
+					focused.orientation = vertical
+				case termbox.KeyCtrlC:
+					focused.orientation = horizontal
+				}
 			}
+			termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
+			layout.draw(getBuffer())
+			termbox.Flush()
+
 		case termbox.EventResize:
 			termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
 			layout.draw(getBuffer())
