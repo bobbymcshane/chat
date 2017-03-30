@@ -132,10 +132,8 @@ func drawHorizontalView(container *container, cells [][]termbox.Cell) {
 		return
 	} else if numContainers == 0 {
 		// TODO: draw buffer
-		if container.focused {
-			for x, c := range "focused" {
-				cells[0][x] = termbox.Cell{c, termbox.ColorWhite, termbox.ColorBlack}
-			}
+		if container.focused && viewHeight >= 1 {
+			cells[0][0] = termbox.Cell{'*', termbox.ColorWhite, termbox.ColorBlack}
 		} else {
 			if container.orientation == horizontal {
 				for y := range cells {
@@ -188,10 +186,8 @@ func drawVerticalView(container *container, cells [][]termbox.Cell) {
 		return
 	} else if numContainers == 0 {
 		// TODO: draw buffer
-		if container.focused {
-			for x, c := range "focused" {
-				cells[0][x] = termbox.Cell{c, termbox.ColorWhite, termbox.ColorBlack}
-			}
+		if container.focused && viewHeight >= 1 {
+			cells[0][0] = termbox.Cell{'*', termbox.ColorWhite, termbox.ColorBlack}
 		} else {
 			if container.orientation == vertical {
 				for y := range cells {
@@ -286,7 +282,7 @@ func main() {
 	termbox.SetInputMode(termbox.InputEsc | termbox.InputMouse)
 	termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
 
-	layout := container{}
+	layout := container{orientation: vertical}
 	for i := 0; i < 3; i++ {
 		layout.newContainer(vertical)
 	}
@@ -308,7 +304,7 @@ func main() {
 			case 'q':
 				return
 			case 'c':
-				focused.newContainer(unspecified)
+				focused.newContainer(vertical)
 			case 'i':
 				focused = focused.Focus(in)
 			case 'o':
