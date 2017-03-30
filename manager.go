@@ -46,6 +46,11 @@ func drawHorizontalView(container *container, cells [][]termbox.Cell) {
 		// TODO: account for remainder
 	} else {
 		// TODO: draw buffer
+		for y := range cells {
+			for x, _ := range cells[y] {
+				cells[y][x] = termbox.Cell{'h', termbox.ColorWhite, termbox.ColorBlack}
+			}
+		}
 		return
 	}
 
@@ -86,6 +91,11 @@ func drawVerticalView(container *container, cells [][]termbox.Cell) {
 		// TODO: account for remainder
 	} else {
 		// TODO: draw buffer
+		for y := range cells {
+			for x, _ := range cells[y] {
+				cells[y][x] = termbox.Cell{'v', termbox.ColorWhite, termbox.ColorBlack}
+			}
+		}
 		return
 	}
 
