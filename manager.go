@@ -25,7 +25,7 @@ func sliceView(startX, startY, width, height int, cells [][]termbox.Cell) [][]te
 	//fmt.Printf("Splitting view [%v x %v] [%v x %v]\n", startX, startY, width, height)
 	buffer := make([][]termbox.Cell, height)
 	for i := 0; startY+i < height; i++ {
-		buffer[i] = cells[startY+i][startX+width:]
+		buffer[i] = cells[startY+i][startX : startX+width]
 	}
 	return buffer
 }
@@ -44,7 +44,10 @@ func drawHorizontalView(container *container, cells [][]termbox.Cell) {
 		containerHeight = correctedHeight / numContainers
 		remainder = correctedHeight % numContainers
 		// TODO: account for remainder
-	} else {
+	} else if numContainers == 1 {
+		container.containers[0].draw(cells)
+		return
+	} else if numContainers == 0 {
 		// TODO: draw buffer
 		for y := range cells {
 			for x, _ := range cells[y] {
@@ -89,7 +92,11 @@ func drawVerticalView(container *container, cells [][]termbox.Cell) {
 		containerWidth = correctedWidth / numContainers
 		remainder = correctedWidth % numContainers
 		// TODO: account for remainder
-	} else {
+	} else if numContainers == 1 {
+		//fmt.Println("one container")
+		container.containers[0].draw(cells)
+		return
+	} else if numContainers == 0 {
 		// TODO: draw buffer
 		for y := range cells {
 			for x, _ := range cells[y] {
@@ -170,7 +177,7 @@ func main() {
 		containers = append(containers, &container{horizontal, nil})
 	}
 
-	layout := container{vertical, containers}
+	layout := container{horizontal, containers}
 	// TODO: draw windows here
 	layout.draw(getBuffer())
 
