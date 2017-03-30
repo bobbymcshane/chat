@@ -1,6 +1,7 @@
 package main
 
 import (
+	//"fmt"
 	"github.com/nsf/termbox-go"
 )
 
@@ -20,19 +21,61 @@ type container struct {
 	containers  []*container
 }
 
-func sliceView(width, height int, cells [][]termbox.Cell) [][]termbox.Cell {
+func sliceView(startX, startY, width, height int, cells [][]termbox.Cell) [][]termbox.Cell {
+	//fmt.Printf("Splitting view [%v x %v] [%v x %v]\n", startX, startY, width, height)
 	buffer := make([][]termbox.Cell, height)
-	for i := 0; i < height; i++ {
-		buffer[i] = cells[i][width:]
+	for i := 0; startY+i < height; i++ {
+		buffer[i] = cells[startY+i][startX+width:]
 	}
 	return buffer
 }
 
 // draw the container in the set slice of cells
-func drawView(container *container, cells [][]termbox.Cell) {
+func drawHorizontalView(container *container, cells [][]termbox.Cell) {
+	viewHeight := len(cells)
+	viewWidth := len(cells[0])
+	//fmt.Printf("Drawing horizontal view [%v x %v]\n", viewWidth, viewHeight)
+	containerHeight := viewHeight
+	remainder := 0
+	if numContainers := len(container.containers); numContainers > 1 {
+		// if we have two containers, we want one divider
+		numDividers := numContainers - 1
+		correctedHeight := viewHeight - numDividers
+		containerHeight = correctedHeight / numContainers
+		remainder = correctedHeight % numContainers
+		// TODO: account for remainder
+	} else {
+		// TODO: draw buffer
+		return
+	}
+
+	dividerY := 0
+	for _, c := range container.containers {
+		cHeight := containerHeight
+		if remainder > 0 {
+			// add one to the container width so we don't get the remainder all in the last container
+			cHeight++
+			remainder--
+		}
+
+		if dividerY > 0 {
+			for x := 0; x < viewWidth; x++ {
+				cells[dividerY][x] = termbox.Cell{HORIZONTAL_LINE, termbox.ColorWhite, termbox.ColorBlack}
+			}
+			// add one because we drew a divider
+			dividerY++
+		}
+		c.draw(sliceView(0, dividerY, viewWidth, cHeight, cells))
+		dividerY += cHeight
+	}
+}
+
+// draw the container in the set slice of cells
+func drawVerticalView(container *container, cells [][]termbox.Cell) {
 	viewWidth := len(cells[0])
 	viewHeight := len(cells)
-	containerWidth := 0
+	//fmt.Printf("Drawing vertical view [%v x %v]\n", viewWidth, viewHeight)
+	containerWidth := viewWidth
 	remainder := 0
 	if numContainers := len(container.containers); numContainers > 1 {
 		// if we have two containers, we want one divider
@@ -63,8 +106,16 @@ func drawView(container *container, cells [][]termbox.Cell) {
 			dividerX++
 		}
 
-		drawView(c, sliceView(dividerX, viewHeight, cells))
+		c.draw(sliceView(dividerX, 0, cWidth, viewHeight, cells))
 		dividerX += cWidth
+	}
+}
+
+func (container *container) draw(cells [][]termbox.Cell) {
+	if container.orientation == horizontal {
+		drawHorizontalView(container, cells)
+	} else {
+		drawVerticalView(container, cells)
 	}
 }
 
@@ -84,6 +135,17 @@ func getBuffer() [][]termbox.Cell {
 	return buffer
 }
 
+func test() [][]termbox.Cell {
+	x, y := 204, 52
+	buffer := make([][]termbox.Cell, y)
+	// Loop over the rows, slicing each row from the front of the remaining cells slice
+	for i := range buffer {
+		buffer[i] = make([]termbox.Cell, x)
+	}
+
+	return buffer
+}
+
 func main() {
 	err := termbox.Init()
 	if err != nil {
@@ -95,13 +157,12 @@ func main() {
 	termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
 	var containers []*container
 	for i := 0; i < 3; i++ {
-		containers = append(containers, &container{})
+		containers = append(containers, &container{horizontal, nil})
 	}
 
 	layout := container{vertical, containers}
 	// TODO: draw windows here
-	termbox.Flush()
-	drawView(&layout, getBuffer())
+	layout.draw(getBuffer())
 
 	termbox.Flush()
 	for {
@@ -111,15 +172,15 @@ func main() {
 			case 'q':
 				return
 			case 'n':
-				layout.containers = append(layout.containers, &container{})
+				layout.containers[0].containers = append(layout.containers[0].containers, &container{})
 				termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
-				drawView(&layout, getBuffer())
+				layout.draw(getBuffer())
 				termbox.Flush()
 				break
 			}
 		case termbox.EventResize:
 			termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
-			drawView(&layout, getBuffer())
+			layout.draw(getBuffer())
 			termbox.Flush()
 		case termbox.EventError:
 			panic(ev.Err)
