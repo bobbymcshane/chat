@@ -24,7 +24,7 @@ type container struct {
 func sliceView(startX, startY, width, height int, cells [][]termbox.Cell) [][]termbox.Cell {
 	//fmt.Printf("Splitting view [%v x %v] [%v x %v]\n", startX, startY, width, height)
 	buffer := make([][]termbox.Cell, height)
-	for i := 0; startY+i < height; i++ {
+	for i := 0; i < height; i++ {
 		buffer[i] = cells[startY+i][startX : startX+width]
 	}
 	return buffer
@@ -93,7 +93,6 @@ func drawVerticalView(container *container, cells [][]termbox.Cell) {
 		remainder = correctedWidth % numContainers
 		// TODO: account for remainder
 	} else if numContainers == 1 {
-		//fmt.Println("one container")
 		container.containers[0].draw(cells)
 		return
 	} else if numContainers == 0 {
