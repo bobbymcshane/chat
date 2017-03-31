@@ -27,7 +27,7 @@ type pane struct {
 }
 
 type Manager struct {
-	*Layout
+	VerticalLayout
 	orientation orientation // unspecified, horizontal, vertical
 	focused     bool
 }
@@ -40,12 +40,12 @@ func (container *Manager) Focus(d direction) *Manager {
 	toFocus := container
 	switch d {
 	case in:
-		if len(container.Children()) > 0 {
-			toFocus = container.Children()[0].(*Manager)
+		if inContainer := container.In(); inContainer != nil {
+			toFocus = inContainer.(*Manager)
 		}
 	case out:
-		if container.Parent() != nil {
-			toFocus = container.Parent().(*Manager)
+		if outContainer := container.Out(); outContainer != nil {
+			toFocus = outContainer.(*Manager)
 		}
 	case down:
 		for containerItr, parent := container, container.Parent().(*Manager); parent != nil; containerItr, parent = parent, parent.Parent().(*Manager) {
@@ -90,47 +90,57 @@ func (container *Manager) Focus(d direction) *Manager {
 			}
 		}
 	case left:
-		for containerItr, parent := container, container.Parent().(*Manager); parent != nil; containerItr, parent = parent, parent.Parent().(*Manager) {
-			if containerItr == parent {
-				panic("invalid node traversal")
-			}
-			if parent.orientation != vertical {
-				// all of theses containers are above or below us
-				continue
-			}
-			for i, c := range parent.Children() {
-				if c == containerItr {
-					// we have found our current container in the parent. pick the container to the right
-					if i > 0 {
-						toFocus = parent.Children()[i-1].(*Manager)
-						for ; len(toFocus.Children()) > 0; toFocus = toFocus.Children()[len(toFocus.Children())-1].(*Manager) {
+		if l := container.Left(); l != nil {
+			toFocus = l.(*Manager)
+		}
+		/*
+			for containerItr, parent := container, container.Parent().(*Manager); parent != nil; containerItr, parent = parent, parent.Parent().(*Manager) {
+				if containerItr == parent {
+					panic("invalid node traversal")
+				}
+				if parent.orientation != vertical {
+					// all of theses containers are above or below us
+					continue
+				}
+				for i, c := range parent.Children() {
+					if c == containerItr {
+						// we have found our current container in the parent. pick the container to the right
+						if i > 0 {
+							toFocus = parent.Children()[i-1].(*Manager)
+							for ; len(toFocus.Children()) > 0; toFocus = toFocus.Children()[len(toFocus.Children())-1].(*Manager) {
+							}
+							goto found
 						}
-						goto found
 					}
 				}
 			}
-		}
+		*/
 	case right:
-		for containerItr, parent := container, container.Parent().(*Manager); parent != nil; containerItr, parent = parent, parent.Parent().(*Manager) {
-			if containerItr == parent {
-				panic("invalid node traversal")
-			}
-			if parent.orientation != vertical {
-				// all of theses containers are above or below us
-				continue
-			}
-			for i, c := range parent.Children() {
-				if c == containerItr {
-					// we have found our current container in the parent. pick the container to the right
-					if i+1 < len(parent.Children()) {
-						toFocus = parent.Children()[i+1].(*Manager)
-						for ; len(toFocus.Children()) > 0; toFocus = toFocus.Children()[0].(*Manager) {
+		if r := container.Right(); r != nil {
+			toFocus = r.(*Manager)
+		}
+		/*
+			for containerItr, parent := container, container.Parent().(*Manager); parent != nil; containerItr, parent = parent, parent.Parent().(*Manager) {
+				if containerItr == parent {
+					panic("invalid node traversal")
+				}
+				if parent.orientation != vertical {
+					// all of theses containers are above or below us
+					continue
+				}
+				for i, c := range parent.Children() {
+					if c == containerItr {
+						// we have found our current container in the parent. pick the container to the right
+						if i+1 < len(parent.Children()) {
+							toFocus = parent.Children()[i+1].(*Manager)
+							for ; len(toFocus.Children()) > 0; toFocus = toFocus.Children()[0].(*Manager) {
+							}
+							goto found
 						}
-						goto found
 					}
 				}
 			}
-		}
+		*/
 	}
 
 found:
@@ -260,16 +270,16 @@ func drawVerticalView(container *Manager, cells [][]termbox.Cell) {
 }
 
 // create a new container inside of parent
-func (parent Manager) newContainer(o orientation) {
+func (parent *Manager) newContainer(o orientation) {
 	numContainers := 1
 	if len(parent.Children()) == 0 {
 		// make two containers if we are making the first container in a container
 		numContainers++
 	}
 	for i := 0; i < numContainers; i++ {
-		newContainer := &Manager{Layout: &Layout{}}
+		newContainer := &Manager{}
 		newContainer.orientation = o
-		newContainer.SetParent(&parent)
+		newContainer.SetParent(parent)
 		parent.SetChildren(append(parent.Children(), newContainer))
 	}
 }
@@ -319,7 +329,7 @@ func main() {
 	termbox.SetInputMode(termbox.InputEsc | termbox.InputMouse)
 	termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
 
-	var layout *Manager = &Manager{Layout: &Layout{}, orientation: vertical}
+	var layout *Manager = &Manager{orientation: vertical}
 	for i := 0; i < 3; i++ {
 		layout.newContainer(vertical)
 	}
