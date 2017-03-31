@@ -344,7 +344,7 @@ func main() {
 				return
 			case 'd':
 				toDelete := focused
-				for o := direction(up); toDelete == focused; o++ {
+				for o := direction(up); toDelete == focused && o < in; o++ {
 					focused = focused.Focus(o)
 				}
 				if toDelete.parent == nil {
