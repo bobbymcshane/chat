@@ -343,17 +343,31 @@ func main() {
 			case 'q':
 				return
 			case 'd':
+				for {
+					if focused.parent == nil {
+						// deleted the last container. end program
+						return
+					}
+
+					if len(focused.parent.containers) > 1 {
+						break
+					} else {
+						// delete parent container if we are deleting the only container in the parent
+						focused = focused.Focus(out)
+					}
+				}
+
 				toDelete := focused
 				for o := direction(up); toDelete == focused && o < in; o++ {
 					focused = focused.Focus(o)
 				}
-				if toDelete.parent == nil {
-					// deleted the last container. end program
-					return
-				}
+
 				for i, c := range toDelete.parent.containers {
 					if c == toDelete {
-						toDelete.parent.containers = append(toDelete.parent.containers[:i], toDelete.parent.containers[i+1:]...)
+						if len(toDelete.parent.containers) > 1 {
+							toDelete.parent.containers = append(toDelete.parent.containers[:i], toDelete.parent.containers[i+1:]...)
+						} else {
+						}
 					}
 				}
 			case 'c':
