@@ -50,53 +50,92 @@ func (container *container) Focus(d direction) *container {
 			toFocus = container.parent
 		}
 	case down:
-		if container.parent != nil && container.parent.orientation == horizontal {
-			for i, c := range container.parent.containers {
-				if c == container {
-					if i+1 < len(container.parent.containers) {
-						toFocus = container.parent.containers[i+1]
+		for containerItr, parent := container, container.parent; parent != nil; containerItr, parent = parent, parent.parent {
+			if containerItr == parent {
+				panic("invalid node traversal")
+			}
+			if parent.orientation != horizontal {
+				// all of theses containers are above or below us
+				continue
+			}
+			for i, c := range parent.containers {
+				if c == containerItr {
+					// we have found our current container in the parent. pick the container to the right
+					if i+1 < len(parent.containers) {
+						toFocus = parent.containers[i+1]
+						for ; len(toFocus.containers) > 0; toFocus = toFocus.containers[0] {
+						}
+						goto found
 					}
-
-					break
 				}
 			}
 		}
 	case up:
-		if container.parent != nil && container.parent.orientation == horizontal {
-			for i, c := range container.parent.containers {
-				if c == container {
+		for containerItr, parent := container, container.parent; parent != nil; containerItr, parent = parent, parent.parent {
+			if containerItr == parent {
+				panic("invalid node traversal")
+			}
+			if parent.orientation != horizontal {
+				// all of theses containers are above or below us
+				continue
+			}
+			for i, c := range parent.containers {
+				if c == containerItr {
+					// we have found our current container in the parent. pick the container to the right
 					if i > 0 {
-						toFocus = container.parent.containers[i-1]
+						toFocus = parent.containers[i-1]
+						for ; len(toFocus.containers) > 0; toFocus = toFocus.containers[len(toFocus.containers)-1] {
+						}
+						goto found
 					}
-					break
 				}
 			}
 		}
 	case left:
-		if container.parent != nil && container.parent.orientation == vertical {
-			for i, c := range container.parent.containers {
-				if c == container {
+		for containerItr, parent := container, container.parent; parent != nil; containerItr, parent = parent, parent.parent {
+			if containerItr == parent {
+				panic("invalid node traversal")
+			}
+			if parent.orientation != vertical {
+				// all of theses containers are above or below us
+				continue
+			}
+			for i, c := range parent.containers {
+				if c == containerItr {
+					// we have found our current container in the parent. pick the container to the right
 					if i > 0 {
-						toFocus = container.parent.containers[i-1]
+						toFocus = parent.containers[i-1]
+						for ; len(toFocus.containers) > 0; toFocus = toFocus.containers[len(toFocus.containers)-1] {
+						}
+						goto found
 					}
-					break
 				}
 			}
 		}
 	case right:
-		if container.parent != nil && container.parent.orientation == vertical {
-			for i, c := range container.parent.containers {
-				if c == container {
-					if i+1 < len(container.parent.containers) {
-						toFocus = container.parent.containers[i+1]
+		for containerItr, parent := container, container.parent; parent != nil; containerItr, parent = parent, parent.parent {
+			if containerItr == parent {
+				panic("invalid node traversal")
+			}
+			if parent.orientation != vertical {
+				// all of theses containers are above or below us
+				continue
+			}
+			for i, c := range parent.containers {
+				if c == containerItr {
+					// we have found our current container in the parent. pick the container to the right
+					if i+1 < len(parent.containers) {
+						toFocus = parent.containers[i+1]
+						for ; len(toFocus.containers) > 0; toFocus = toFocus.containers[0] {
+						}
+						goto found
 					}
-
-					break
 				}
 			}
 		}
 	}
 
+found:
 	if toFocus != container {
 		container.focused = false
 		toFocus.focused = true
