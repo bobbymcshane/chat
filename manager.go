@@ -20,8 +20,8 @@ const (
 	down  = iota
 	left  = iota
 	right = iota
-	in    = iota
 	out   = iota
+	in    = iota
 )
 
 type pane struct {
@@ -342,6 +342,20 @@ func main() {
 			switch ev.Ch {
 			case 'q':
 				return
+			case 'd':
+				toDelete := focused
+				for o := direction(up); toDelete == focused; o++ {
+					focused = focused.Focus(o)
+				}
+				if toDelete.parent == nil {
+					// deleted the last container. end program
+					return
+				}
+				for i, c := range toDelete.parent.containers {
+					if c == toDelete {
+						toDelete.parent.containers = append(toDelete.parent.containers[:i], toDelete.parent.containers[i+1:]...)
+					}
+				}
 			case 'c':
 				focused.newContainer(vertical)
 			case 'i':
