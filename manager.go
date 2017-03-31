@@ -358,16 +358,18 @@ func main() {
 				}
 
 				toDelete := focused
-				for o := direction(up); toDelete == focused && o < in; o++ {
-					focused = focused.Focus(o)
-				}
-
 				for i, c := range toDelete.parent.containers {
 					if c == toDelete {
-						if len(toDelete.parent.containers) > 1 {
-							toDelete.parent.containers = append(toDelete.parent.containers[:i], toDelete.parent.containers[i+1:]...)
+						// focus sibling container. NOTE: we guaranteed above we would have one
+						if i > 0 {
+							focused = toDelete.parent.containers[i-1]
+						} else if (i + 1) < len(toDelete.parent.containers) {
+							focused = toDelete.parent.containers[i+1]
 						} else {
+							panic("If we are the last container in our parent we should be deleting our parent")
 						}
+						focused.focused = true
+						toDelete.parent.containers = append(toDelete.parent.containers[:i], toDelete.parent.containers[i+1:]...)
 					}
 				}
 			case 'c':
