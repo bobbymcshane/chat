@@ -1,7 +1,6 @@
 package main
 
 import (
-	//"fmt"
 	"github.com/nsf/termbox-go"
 )
 
@@ -27,14 +26,13 @@ const (
 type pane struct {
 }
 
-type container struct {
+type Manager struct {
+	*Layout
 	orientation orientation // unspecified, horizontal, vertical
 	focused     bool
-	containers  []*container
-	parent      *container
 }
 
-func (container *container) Focus(d direction) *container {
+func (container *Manager) Focus(d direction) *Manager {
 	if !container.focused {
 		panic("container not focused")
 	}
@@ -42,15 +40,15 @@ func (container *container) Focus(d direction) *container {
 	toFocus := container
 	switch d {
 	case in:
-		if len(container.containers) > 0 {
-			toFocus = container.containers[0]
+		if len(container.Children()) > 0 {
+			toFocus = container.Children()[0].(*Manager)
 		}
 	case out:
-		if container.parent != nil {
-			toFocus = container.parent
+		if container.Parent() != nil {
+			toFocus = container.Parent().(*Manager)
 		}
 	case down:
-		for containerItr, parent := container, container.parent; parent != nil; containerItr, parent = parent, parent.parent {
+		for containerItr, parent := container, container.Parent().(*Manager); parent != nil; containerItr, parent = parent, parent.Parent().(*Manager) {
 			if containerItr == parent {
 				panic("invalid node traversal")
 			}
@@ -58,12 +56,12 @@ func (container *container) Focus(d direction) *container {
 				// all of theses containers are above or below us
 				continue
 			}
-			for i, c := range parent.containers {
+			for i, c := range parent.Children() {
 				if c == containerItr {
 					// we have found our current container in the parent. pick the container to the right
-					if i+1 < len(parent.containers) {
-						toFocus = parent.containers[i+1]
-						for ; len(toFocus.containers) > 0; toFocus = toFocus.containers[0] {
+					if i+1 < len(parent.Children()) {
+						toFocus = parent.Children()[i+1].(*Manager)
+						for ; len(toFocus.Children()) > 0; toFocus = toFocus.Children()[0].(*Manager) {
 						}
 						goto found
 					}
@@ -71,7 +69,7 @@ func (container *container) Focus(d direction) *container {
 			}
 		}
 	case up:
-		for containerItr, parent := container, container.parent; parent != nil; containerItr, parent = parent, parent.parent {
+		for containerItr, parent := container, container.Parent().(*Manager); parent != nil; containerItr, parent = parent, parent.Parent().(*Manager) {
 			if containerItr == parent {
 				panic("invalid node traversal")
 			}
@@ -79,12 +77,12 @@ func (container *container) Focus(d direction) *container {
 				// all of theses containers are above or below us
 				continue
 			}
-			for i, c := range parent.containers {
+			for i, c := range parent.Children() {
 				if c == containerItr {
 					// we have found our current container in the parent. pick the container to the right
 					if i > 0 {
-						toFocus = parent.containers[i-1]
-						for ; len(toFocus.containers) > 0; toFocus = toFocus.containers[len(toFocus.containers)-1] {
+						toFocus = parent.Children()[i-1].(*Manager)
+						for ; len(toFocus.Children()) > 0; toFocus = toFocus.Children()[len(toFocus.Children())-1].(*Manager) {
 						}
 						goto found
 					}
@@ -92,7 +90,7 @@ func (container *container) Focus(d direction) *container {
 			}
 		}
 	case left:
-		for containerItr, parent := container, container.parent; parent != nil; containerItr, parent = parent, parent.parent {
+		for containerItr, parent := container, container.Parent().(*Manager); parent != nil; containerItr, parent = parent, parent.Parent().(*Manager) {
 			if containerItr == parent {
 				panic("invalid node traversal")
 			}
@@ -100,12 +98,12 @@ func (container *container) Focus(d direction) *container {
 				// all of theses containers are above or below us
 				continue
 			}
-			for i, c := range parent.containers {
+			for i, c := range parent.Children() {
 				if c == containerItr {
 					// we have found our current container in the parent. pick the container to the right
 					if i > 0 {
-						toFocus = parent.containers[i-1]
-						for ; len(toFocus.containers) > 0; toFocus = toFocus.containers[len(toFocus.containers)-1] {
+						toFocus = parent.Children()[i-1].(*Manager)
+						for ; len(toFocus.Children()) > 0; toFocus = toFocus.Children()[len(toFocus.Children())-1].(*Manager) {
 						}
 						goto found
 					}
@@ -113,7 +111,7 @@ func (container *container) Focus(d direction) *container {
 			}
 		}
 	case right:
-		for containerItr, parent := container, container.parent; parent != nil; containerItr, parent = parent, parent.parent {
+		for containerItr, parent := container, container.Parent().(*Manager); parent != nil; containerItr, parent = parent, parent.Parent().(*Manager) {
 			if containerItr == parent {
 				panic("invalid node traversal")
 			}
@@ -121,12 +119,12 @@ func (container *container) Focus(d direction) *container {
 				// all of theses containers are above or below us
 				continue
 			}
-			for i, c := range parent.containers {
+			for i, c := range parent.Children() {
 				if c == containerItr {
 					// we have found our current container in the parent. pick the container to the right
-					if i+1 < len(parent.containers) {
-						toFocus = parent.containers[i+1]
-						for ; len(toFocus.containers) > 0; toFocus = toFocus.containers[0] {
+					if i+1 < len(parent.Children()) {
+						toFocus = parent.Children()[i+1].(*Manager)
+						for ; len(toFocus.Children()) > 0; toFocus = toFocus.Children()[0].(*Manager) {
 						}
 						goto found
 					}
@@ -153,13 +151,13 @@ func sliceView(startX, startY, width, height int, cells [][]termbox.Cell) [][]te
 }
 
 // draw the container in the set slice of cells
-func drawHorizontalView(container *container, cells [][]termbox.Cell) {
+func drawHorizontalView(container *Manager, cells [][]termbox.Cell) {
 	viewHeight := len(cells)
 	viewWidth := len(cells[0])
 	//fmt.Printf("Drawing horizontal view [%v x %v]\n", viewWidth, viewHeight)
 	containerHeight := viewHeight
 	remainder := 0
-	if numContainers := len(container.containers); numContainers > 1 {
+	if numContainers := len(container.Children()); numContainers > 1 {
 		// if we have two containers, we want one divider
 		numDividers := numContainers - 1
 		correctedHeight := viewHeight - numDividers
@@ -167,7 +165,7 @@ func drawHorizontalView(container *container, cells [][]termbox.Cell) {
 		remainder = correctedHeight % numContainers
 		// TODO: account for remainder
 	} else if numContainers == 1 {
-		container.containers[0].draw(cells)
+		container.Children()[0].Draw(cells)
 		return
 	} else if numContainers == 0 {
 		// TODO: draw buffer
@@ -186,7 +184,7 @@ func drawHorizontalView(container *container, cells [][]termbox.Cell) {
 	}
 
 	dividerY := 0
-	for _, c := range container.containers {
+	for _, c := range container.Children() {
 		cHeight := containerHeight
 		if remainder > 0 {
 			// add one to the container width so we don't get the remainder all in the last container
@@ -201,19 +199,19 @@ func drawHorizontalView(container *container, cells [][]termbox.Cell) {
 			// add one because we drew a divider
 			dividerY++
 		}
-		c.draw(sliceView(0, dividerY, viewWidth, cHeight, cells))
+		c.Draw(sliceView(0, dividerY, viewWidth, cHeight, cells))
 		dividerY += cHeight
 	}
 }
 
 // draw the container in the set slice of cells
-func drawVerticalView(container *container, cells [][]termbox.Cell) {
+func drawVerticalView(container *Manager, cells [][]termbox.Cell) {
 	viewWidth := len(cells[0])
 	viewHeight := len(cells)
 	//fmt.Printf("Drawing vertical view [%v x %v]\n", viewWidth, viewHeight)
 	containerWidth := viewWidth
 	remainder := 0
-	if numContainers := len(container.containers); numContainers > 1 {
+	if numContainers := len(container.Children()); numContainers > 1 {
 		// if we have two containers, we want one divider
 		numDividers := numContainers - 1
 		correctedWidth := viewWidth - numDividers
@@ -221,7 +219,7 @@ func drawVerticalView(container *container, cells [][]termbox.Cell) {
 		remainder = correctedWidth % numContainers
 		// TODO: account for remainder
 	} else if numContainers == 1 {
-		container.containers[0].draw(cells)
+		container.Children()[0].Draw(cells)
 		return
 	} else if numContainers == 0 {
 		// TODO: draw buffer
@@ -240,7 +238,7 @@ func drawVerticalView(container *container, cells [][]termbox.Cell) {
 	}
 
 	dividerX := 0
-	for _, c := range container.containers {
+	for _, c := range container.Children() {
 		cWidth := containerWidth
 		if remainder > 0 {
 			// add one to the container width so we don't get the remainder all in the last container
@@ -256,31 +254,31 @@ func drawVerticalView(container *container, cells [][]termbox.Cell) {
 			dividerX++
 		}
 
-		c.draw(sliceView(dividerX, 0, cWidth, viewHeight, cells))
+		c.Draw(sliceView(dividerX, 0, cWidth, viewHeight, cells))
 		dividerX += cWidth
 	}
 }
 
 // create a new container inside of parent
-func (parent *container) newContainer(o orientation) {
+func (parent Manager) newContainer(o orientation) {
 	numContainers := 1
-	if len(parent.containers) == 0 {
+	if len(parent.Children()) == 0 {
 		// make two containers if we are making the first container in a container
 		numContainers++
 	}
 	for i := 0; i < numContainers; i++ {
-		newContainer := &container{}
+		newContainer := &Manager{Layout: &Layout{}}
 		newContainer.orientation = o
-		newContainer.parent = parent
-		parent.containers = append(parent.containers, newContainer)
+		newContainer.SetParent(&parent)
+		parent.SetChildren(append(parent.Children(), newContainer))
 	}
 }
 
-func (container *container) draw(cells [][]termbox.Cell) {
+func (container Manager) Draw(cells [][]termbox.Cell) {
 	if container.orientation == horizontal {
-		drawHorizontalView(container, cells)
+		drawHorizontalView(&container, cells)
 	} else {
-		drawVerticalView(container, cells)
+		drawVerticalView(&container, cells)
 	}
 }
 
@@ -321,19 +319,19 @@ func main() {
 	termbox.SetInputMode(termbox.InputEsc | termbox.InputMouse)
 	termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
 
-	layout := container{orientation: vertical}
+	var layout *Manager = &Manager{Layout: &Layout{}, orientation: vertical}
 	for i := 0; i < 3; i++ {
 		layout.newContainer(vertical)
 	}
 	// focus first container at lowest level
-	focused := layout.containers[0]
-	for ; len(focused.containers) > 0; focused = focused.containers[0] {
+	focused := layout.Children()[0].(*Manager)
+	for ; len(focused.Children()) > 0; focused = focused.Children()[0].(*Manager) {
 	}
 
 	focused.focused = true
 
 	// TODO: draw windows here
-	layout.draw(getBuffer())
+	layout.Draw(getBuffer())
 
 	termbox.Flush()
 	for {
@@ -344,32 +342,32 @@ func main() {
 				return
 			case 'd':
 				for {
-					if focused.parent == nil {
+					if focused.Parent() == nil {
 						// deleted the last container. end program
 						return
 					}
 
-					if len(focused.parent.containers) > 1 {
+					if len(focused.parent.Children()) > 1 {
 						break
 					} else {
 						// delete parent container if we are deleting the only container in the parent
-						focused = focused.Focus(out)
+						//focused = focused.Focus(out)
 					}
 				}
 
 				toDelete := focused
-				for i, c := range toDelete.parent.containers {
+				for i, c := range toDelete.Parent().Children() {
 					if c == toDelete {
 						// focus sibling container. NOTE: we guaranteed above we would have one
 						if i > 0 {
-							focused = toDelete.parent.containers[i-1]
-						} else if (i + 1) < len(toDelete.parent.containers) {
-							focused = toDelete.parent.containers[i+1]
+							focused = toDelete.Parent().Children()[i-1].(*Manager)
+						} else if (i + 1) < len(toDelete.Parent().Children()) {
+							focused = toDelete.Parent().Children()[i+1].(*Manager)
 						} else {
 							panic("If we are the last container in our parent we should be deleting our parent")
 						}
 						focused.focused = true
-						toDelete.parent.containers = append(toDelete.parent.containers[:i], toDelete.parent.containers[i+1:]...)
+						toDelete.Delete()
 					}
 				}
 			case 'c':
@@ -395,12 +393,12 @@ func main() {
 				}
 			}
 			termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
-			layout.draw(getBuffer())
+			layout.Draw(getBuffer())
 			termbox.Flush()
 
 		case termbox.EventResize:
 			termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
-			layout.draw(getBuffer())
+			layout.Draw(getBuffer())
 			termbox.Flush()
 		case termbox.EventError:
 			panic(ev.Err)
