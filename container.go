@@ -6,6 +6,9 @@ import (
 )
 
 type Container interface {
+	// return layout implementation struct
+	GetLayout() *Layout
+
 	Parent() Container
 	SetParent(c Container)
 
@@ -42,6 +45,14 @@ type Container interface {
 type Layout struct {
 	parent   Container
 	children []Container
+}
+
+func NewLayout() *Layout {
+	return &Layout{}
+}
+
+func (layout *Layout) GetLayout() *Layout {
+	return layout
 }
 
 // TODO: how do I make this take an arbitrary number of containers?
@@ -128,7 +139,11 @@ func (layout *Layout) Out() Container {
 
 // Vertical Layout
 type VerticalLayout struct {
-	Layout
+	*Layout
+}
+
+func NewVerticalLayout() *VerticalLayout {
+	return &VerticalLayout{NewLayout()}
 }
 
 func (layout *VerticalLayout) Draw(cells [][]termbox.Cell) {
@@ -161,7 +176,7 @@ func (layout *VerticalLayout) Left() Container {
 func (layout *VerticalLayout) LeftContainer(c Container) Container {
 	for i, con := range layout.Children() {
 		// TODO: maybe use reflection or something to figure out how to compare here?
-		if &con.(*Manager).VerticalLayout == c.(*VerticalLayout) {
+		if con.GetLayout() == c.GetLayout() {
 			if i > 0 {
 				return layout.Children()[i-1]
 			}
@@ -182,7 +197,7 @@ func (layout *VerticalLayout) Right() Container {
 func (layout *VerticalLayout) RightContainer(c Container) Container {
 	for i, con := range layout.Children() {
 		// TODO: maybe use reflection or something to figure out how to compare here?
-		if &con.(*Manager).VerticalLayout == c.(*VerticalLayout) {
+		if con.GetLayout() == c.GetLayout() {
 			if i+1 < len(layout.Children()) {
 				return layout.Children()[i+1]
 			}

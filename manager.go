@@ -27,9 +27,15 @@ type pane struct {
 }
 
 type Manager struct {
-	VerticalLayout
+	*VerticalLayout
 	orientation orientation // unspecified, horizontal, vertical
 	focused     bool
+}
+
+func NewManager() *Manager {
+	man := &Manager{}
+	man.VerticalLayout = NewVerticalLayout()
+	return man
 }
 
 func (container *Manager) Focus(d direction) *Manager {
@@ -277,7 +283,7 @@ func (parent *Manager) newContainer(o orientation) {
 		numContainers++
 	}
 	for i := 0; i < numContainers; i++ {
-		newContainer := &Manager{}
+		newContainer := NewManager()
 		newContainer.orientation = o
 		newContainer.SetParent(parent)
 		parent.SetChildren(append(parent.Children(), newContainer))
@@ -329,7 +335,8 @@ func main() {
 	termbox.SetInputMode(termbox.InputEsc | termbox.InputMouse)
 	termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
 
-	var layout *Manager = &Manager{orientation: vertical}
+	var layout *Manager = NewManager()
+	layout.orientation = vertical
 	for i := 0; i < 3; i++ {
 		layout.newContainer(vertical)
 	}
