@@ -34,7 +34,7 @@ type Manager struct {
 
 func NewManager() *Manager {
 	man := &Manager{}
-	man.topLayout = NewVerticalLayout()
+	man.topLayout = &VerticalLayout{&Layout{}}
 	man.SetFocus(man.topLayout)
 	return man
 }
@@ -107,9 +107,9 @@ func (manager *Manager) newContainer(o orientation) {
 	for i := 0; i < numContainers; i++ {
 		var newContainer ContainerNavigator
 		if o == horizontal {
-			newContainer = NewHorizontalLayout()
+			newContainer = &HorizontalLayout{&Layout{}}
 		} else {
-			newContainer = NewVerticalLayout()
+			newContainer = &VerticalLayout{&Layout{}}
 		}
 		newContainer.SetParent(parent)
 		parent.Append(newContainer)
@@ -217,8 +217,30 @@ func main() {
 				switch ev.Key {
 				case termbox.KeyCtrlV:
 					// TODO:
+					_, ok := manager.Focused().(*VerticalLayout)
+					if !ok {
+						// convert to vertical layout
+						newLayout := NewVerticalLayout(manager.Focused())
+						manager.Focused().Overwrite(newLayout)
+						if manager.Focused().Parent() == nil {
+							// this is our top-level layout
+							manager.topLayout = newLayout
+						}
+						manager.SetFocus(newLayout)
+					}
 				case termbox.KeyCtrlC:
 					// TODO:
+					_, ok := manager.Focused().(*HorizontalLayout)
+					if !ok {
+						// convert to horizontal layout
+						newLayout := NewHorizontalLayout(manager.Focused())
+						manager.Focused().Overwrite(newLayout)
+						if manager.Focused().Parent() == nil {
+							// this is our top-level layout
+							manager.topLayout = newLayout
+						}
+						manager.SetFocus(newLayout)
+					}
 				}
 			}
 			termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)

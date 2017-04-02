@@ -19,7 +19,13 @@ type Container interface {
 	Append(c Container)
 	// remove c from Container
 	Remove(c Container)
+	// delete from parent container
 	Delete()
+
+	// replace toReplace with replacement
+	Replace(toReplace Container, replacement Container)
+	// overwrite container in parent with c
+	Overwrite(c Container)
 
 	// rendering
 	Draw([][]termbox.Cell)
@@ -56,8 +62,13 @@ type Layout struct {
 	children []Container
 }
 
-func NewLayout() *Layout {
-	return &Layout{}
+func NewLayout(c ContainerNavigator) *Layout {
+	newLayout := &Layout{}
+	newLayout.SetChildren(c.Children())
+	if c.Parent() != nil {
+		newLayout.SetParent(c.Parent())
+	}
+	return newLayout
 }
 
 func (layout *Layout) GetLayout() *Layout {
@@ -94,6 +105,22 @@ func (layout *Layout) Remove(c Container) {
 func (layout *Layout) Delete() {
 	if parent := layout.Parent(); parent != nil {
 		parent.Remove(layout)
+	}
+}
+
+func (layout *Layout) Replace(toReplace Container, replacement Container) {
+	children := layout.Children()
+	for i, child := range children {
+		if toReplace.GetLayout() == child.GetLayout() {
+			layout.children[i] = replacement
+			return
+		}
+	}
+}
+
+func (layout *Layout) Overwrite(c Container) {
+	if parent := layout.Parent(); parent != nil {
+		parent.Replace(layout, c)
 	}
 }
 
@@ -178,8 +205,8 @@ type VerticalLayout struct {
 	*Layout
 }
 
-func NewVerticalLayout() *VerticalLayout {
-	return &VerticalLayout{NewLayout()}
+func NewVerticalLayout(c ContainerNavigator) *VerticalLayout {
+	return &VerticalLayout{NewLayout(c)}
 }
 
 func sliceView(startX, startY, width, height int, cells [][]termbox.Cell) [][]termbox.Cell {
@@ -286,8 +313,8 @@ type HorizontalLayout struct {
 	*Layout
 }
 
-func NewHorizontalLayout() *HorizontalLayout {
-	return &HorizontalLayout{NewLayout()}
+func NewHorizontalLayout(c ContainerNavigator) *HorizontalLayout {
+	return &HorizontalLayout{NewLayout(c)}
 }
 
 func (layout *HorizontalLayout) Draw(cells [][]termbox.Cell) {
