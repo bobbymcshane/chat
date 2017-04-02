@@ -21,14 +21,13 @@ type Container interface {
 	Remove(c Container)
 	Delete()
 
-	Navigator
-
 	// rendering
 	Draw([][]termbox.Cell)
 }
 
-type Navigator interface {
+type ContainerNavigator interface {
 	// navigation
+	Container
 	Above() Container
 	AboveContainer(c Container) Container
 
@@ -47,7 +46,7 @@ type Navigator interface {
 
 // General Layout. Implements ContainerNavigator
 type Layout struct {
-	parent   Container
+	parent   ContainerNavigator
 	children []Container
 }
 
@@ -85,7 +84,7 @@ func (layout *Layout) Parent() Container {
 }
 
 func (layout *Layout) SetParent(c Container) {
-	layout.parent = c
+	layout.parent = c.(ContainerNavigator)
 }
 
 func (layout *Layout) Children() []Container {
@@ -102,7 +101,7 @@ func (layout *Layout) Draw(cells [][]termbox.Cell) {
 
 func (layout *Layout) Above() Container {
 	if parent := layout.Parent(); parent != nil {
-		return parent.AboveContainer(layout)
+		return parent.(ContainerNavigator).AboveContainer(layout)
 	}
 	return nil
 }
@@ -113,7 +112,7 @@ func (layout *Layout) AboveContainer(c Container) Container {
 
 func (layout *Layout) Below() Container {
 	if parent := layout.Parent(); parent != nil {
-		return parent.BelowContainer(layout)
+		return parent.(ContainerNavigator).BelowContainer(layout)
 	}
 	return nil
 }
@@ -124,7 +123,7 @@ func (layout *Layout) BelowContainer(c Container) Container {
 
 func (layout *Layout) Left() Container {
 	if parent := layout.Parent(); parent != nil {
-		return parent.LeftContainer(layout)
+		return parent.(ContainerNavigator).LeftContainer(layout)
 	}
 	return nil
 }
@@ -135,7 +134,7 @@ func (layout *Layout) LeftContainer(c Container) Container {
 
 func (layout *Layout) Right() Container {
 	if parent := layout.Parent(); parent != nil {
-		return parent.RightContainer(layout)
+		return parent.(ContainerNavigator).RightContainer(layout)
 	}
 	return nil
 }
