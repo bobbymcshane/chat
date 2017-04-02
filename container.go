@@ -28,6 +28,11 @@ type Container interface {
 type ContainerNavigator interface {
 	// navigation
 	Container
+
+	IsFocused() bool
+	Focus()
+	UnFocus()
+
 	Above() Container
 	AboveContainer(c Container) Container
 
@@ -46,6 +51,7 @@ type ContainerNavigator interface {
 
 // General Layout. Implements ContainerNavigator
 type Layout struct {
+	focused  bool
 	parent   ContainerNavigator
 	children []Container
 }
@@ -56,6 +62,18 @@ func NewLayout() *Layout {
 
 func (layout *Layout) GetLayout() *Layout {
 	return layout
+}
+
+func (layout *Layout) IsFocused() bool {
+	return layout.focused
+}
+
+func (layout *Layout) Focus() {
+	layout.focused = true
+}
+
+func (layout *Layout) UnFocus() {
+	layout.focused = false
 }
 
 // TODO: how do I make this take an arbitrary number of containers?
@@ -164,8 +182,65 @@ func NewVerticalLayout() *VerticalLayout {
 	return &VerticalLayout{NewLayout()}
 }
 
+func sliceView(startX, startY, width, height int, cells [][]termbox.Cell) [][]termbox.Cell {
+	//fmt.Printf("Splitting view [%v x %v] [%v x %v]\n", startX, startY, width, height)
+	buffer := make([][]termbox.Cell, height)
+	for i := 0; i < height; i++ {
+		buffer[i] = cells[startY+i][startX : startX+width]
+	}
+	return buffer
+}
+
 func (layout *VerticalLayout) Draw(cells [][]termbox.Cell) {
-	panic("unimplemented")
+	viewWidth := len(cells[0])
+	viewHeight := len(cells)
+	//fmt.Printf("Drawing vertical view [%v x %v]\n", viewWidth, viewHeight)
+	containerWidth := viewWidth
+	remainder := 0
+	if numContainers := len(layout.Children()); numContainers > 1 {
+		// if we have two containers, we want one divider
+		numDividers := numContainers - 1
+		correctedWidth := viewWidth - numDividers
+		containerWidth = correctedWidth / numContainers
+		remainder = correctedWidth % numContainers
+		// TODO: account for remainder
+	} else if numContainers == 1 {
+		layout.Children()[0].Draw(cells)
+		return
+	} else if numContainers == 0 {
+		// TODO: draw buffer
+		if layout.IsFocused() && viewHeight >= 1 {
+			cells[0][0] = termbox.Cell{'*', termbox.ColorWhite, termbox.ColorBlack}
+		} else {
+			for y := range cells {
+				for x, _ := range cells[y] {
+					cells[y][x] = termbox.Cell{'v', termbox.ColorWhite, termbox.ColorBlack}
+				}
+			}
+		}
+		return
+	}
+
+	dividerX := 0
+	for _, c := range layout.Children() {
+		cWidth := containerWidth
+		if remainder > 0 {
+			// add one to the container width so we don't get the remainder all in the last container
+			cWidth++
+			remainder--
+		}
+
+		if dividerX > 0 {
+			for y := 0; y < viewHeight; y++ {
+				cells[y][dividerX] = termbox.Cell{VERTICAL_LINE, termbox.ColorWhite, termbox.ColorBlack}
+			}
+			// add one because we drew a divider
+			dividerX++
+		}
+
+		c.Draw(sliceView(dividerX, 0, cWidth, viewHeight, cells))
+		dividerX += cWidth
+	}
 }
 
 func (layout *VerticalLayout) AboveContainer(c Container) Container {
@@ -216,7 +291,54 @@ func NewHorizontalLayout() *HorizontalLayout {
 }
 
 func (layout *HorizontalLayout) Draw(cells [][]termbox.Cell) {
-	panic("unimplemented")
+	viewHeight := len(cells)
+	viewWidth := len(cells[0])
+	//fmt.Printf("Drawing horizontal view [%v x %v]\n", viewWidth, viewHeight)
+	containerHeight := viewHeight
+	remainder := 0
+	if numContainers := len(layout.Children()); numContainers > 1 {
+		// if we have two containers, we want one divider
+		numDividers := numContainers - 1
+		correctedHeight := viewHeight - numDividers
+		containerHeight = correctedHeight / numContainers
+		remainder = correctedHeight % numContainers
+		// TODO: account for remainder
+	} else if numContainers == 1 {
+		layout.Children()[0].Draw(cells)
+		return
+	} else if numContainers == 0 {
+		// TODO: draw buffer
+		if layout.IsFocused() && viewHeight >= 1 {
+			cells[0][0] = termbox.Cell{'*', termbox.ColorWhite, termbox.ColorBlack}
+		} else {
+			for y := range cells {
+				for x := range cells[y] {
+					cells[y][x] = termbox.Cell{'h', termbox.ColorWhite, termbox.ColorBlack}
+				}
+			}
+		}
+		return
+	}
+
+	dividerY := 0
+	for _, c := range layout.Children() {
+		cHeight := containerHeight
+		if remainder > 0 {
+			// add one to the container width so we don't get the remainder all in the last container
+			cHeight++
+			remainder--
+		}
+
+		if dividerY > 0 {
+			for x := 0; x < viewWidth; x++ {
+				cells[dividerY][x] = termbox.Cell{HORIZONTAL_LINE, termbox.ColorWhite, termbox.ColorBlack}
+			}
+			// add one because we drew a divider
+			dividerY++
+		}
+		c.Draw(sliceView(0, dividerY, viewWidth, cHeight, cells))
+		dividerY += cHeight
+	}
 }
 
 func (layout *HorizontalLayout) AboveContainer(c Container) Container {
