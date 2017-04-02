@@ -181,7 +181,7 @@ func (layout *VerticalLayout) LeftContainer(c Container) Container {
 				return layout.Children()[i-1]
 			}
 			// nothing to our left... TODO ask our parent
-			break
+			return layout.Left()
 		}
 	}
 	return nil
@@ -202,9 +202,8 @@ func (layout *VerticalLayout) RightContainer(c Container) Container {
 				return layout.Children()[i+1]
 			}
 			// nothing to our right... TODO ask our parent
-			break
+			return layout.Right()
 		}
-		//log.Panicln(con, c)
 	}
 	return nil
 }
