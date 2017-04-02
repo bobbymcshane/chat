@@ -34,7 +34,7 @@ type Manager struct {
 
 func NewManager() *Manager {
 	man := &Manager{}
-	man.VerticalLayout = NewVerticalLayout()
+	man.VerticalLayout = NewVerticalLayout().(*VerticalLayout)
 	return man
 }
 
@@ -54,47 +54,57 @@ func (container *Manager) Focus(d direction) *Manager {
 			toFocus = outContainer.(*Manager)
 		}
 	case down:
-		for containerItr, parent := container, container.Parent().(*Manager); parent != nil; containerItr, parent = parent, parent.Parent().(*Manager) {
-			if containerItr == parent {
-				panic("invalid node traversal")
-			}
-			if parent.orientation != horizontal {
-				// all of theses containers are above or below us
-				continue
-			}
-			for i, c := range parent.Children() {
-				if c == containerItr {
-					// we have found our current container in the parent. pick the container to the right
-					if i+1 < len(parent.Children()) {
-						toFocus = parent.Children()[i+1].(*Manager)
-						for ; len(toFocus.Children()) > 0; toFocus = toFocus.Children()[0].(*Manager) {
+		if b := container.Below(); b != nil {
+			toFocus = b.(*Manager)
+		}
+		/*
+			for containerItr, parent := container, container.Parent().(*Manager); parent != nil; containerItr, parent = parent, parent.Parent().(*Manager) {
+				if containerItr == parent {
+					panic("invalid node traversal")
+				}
+				if parent.orientation != horizontal {
+					// all of theses containers are above or below us
+					continue
+				}
+				for i, c := range parent.Children() {
+					if c == containerItr {
+						// we have found our current container in the parent. pick the container to the right
+						if i+1 < len(parent.Children()) {
+							toFocus = parent.Children()[i+1].(*Manager)
+							for ; len(toFocus.Children()) > 0; toFocus = toFocus.Children()[0].(*Manager) {
+							}
+							goto found
 						}
-						goto found
 					}
 				}
 			}
-		}
+		*/
 	case up:
-		for containerItr, parent := container, container.Parent().(*Manager); parent != nil; containerItr, parent = parent, parent.Parent().(*Manager) {
-			if containerItr == parent {
-				panic("invalid node traversal")
-			}
-			if parent.orientation != horizontal {
-				// all of theses containers are above or below us
-				continue
-			}
-			for i, c := range parent.Children() {
-				if c == containerItr {
-					// we have found our current container in the parent. pick the container to the right
-					if i > 0 {
-						toFocus = parent.Children()[i-1].(*Manager)
-						for ; len(toFocus.Children()) > 0; toFocus = toFocus.Children()[len(toFocus.Children())-1].(*Manager) {
+		if a := container.Above(); a != nil {
+			toFocus = a.(*Manager)
+		}
+		/*
+			for containerItr, parent := container, container.Parent().(*Manager); parent != nil; containerItr, parent = parent, parent.Parent().(*Manager) {
+				if containerItr == parent {
+					panic("invalid node traversal")
+				}
+				if parent.orientation != horizontal {
+					// all of theses containers are above or below us
+					continue
+				}
+				for i, c := range parent.Children() {
+					if c == containerItr {
+						// we have found our current container in the parent. pick the container to the right
+						if i > 0 {
+							toFocus = parent.Children()[i-1].(*Manager)
+							for ; len(toFocus.Children()) > 0; toFocus = toFocus.Children()[len(toFocus.Children())-1].(*Manager) {
+							}
+							goto found
 						}
-						goto found
 					}
 				}
 			}
-		}
+		*/
 	case left:
 		if l := container.Left(); l != nil {
 			toFocus = l.(*Manager)
@@ -149,7 +159,6 @@ func (container *Manager) Focus(d direction) *Manager {
 		*/
 	}
 
-found:
 	if toFocus != container {
 		container.focused = false
 		toFocus.focused = true
@@ -341,7 +350,7 @@ func main() {
 		layout.newContainer(vertical)
 	}
 	// focus first container at lowest level
-	focused := layout.Children()[0].(*Manager)
+	var focused *Manager = layout.Children()[0].(*Manager)
 	for ; len(focused.Children()) > 0; focused = focused.Children()[0].(*Manager) {
 	}
 
@@ -368,7 +377,7 @@ func main() {
 						break
 					} else {
 						// delete parent container if we are deleting the only container in the parent
-						//focused = focused.Focus(out)
+						focused = focused.Focus(out)
 					}
 				}
 
