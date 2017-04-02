@@ -160,7 +160,7 @@ type VerticalLayout struct {
 	*Layout
 }
 
-func NewVerticalLayout() Container {
+func NewVerticalLayout() *VerticalLayout {
 	return &VerticalLayout{NewLayout()}
 }
 
@@ -211,7 +211,7 @@ type HorizontalLayout struct {
 	*Layout
 }
 
-func NewHorizontalLayout() Container {
+func NewHorizontalLayout() *HorizontalLayout {
 	return &HorizontalLayout{NewLayout()}
 }
 

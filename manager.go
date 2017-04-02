@@ -27,14 +27,14 @@ type pane struct {
 }
 
 type Manager struct {
-	*VerticalLayout
+	ContainerNavigator
 	orientation orientation // unspecified, horizontal, vertical
 	focused     bool
 }
 
 func NewManager() *Manager {
 	man := &Manager{}
-	man.VerticalLayout = NewVerticalLayout().(*VerticalLayout)
+	man.ContainerNavigator = NewVerticalLayout()
 	return man
 }
 
@@ -373,7 +373,7 @@ func main() {
 						return
 					}
 
-					if len(focused.parent.Children()) > 1 {
+					if len(focused.Parent().Children()) > 1 {
 						break
 					} else {
 						// delete parent container if we are deleting the only container in the parent
