@@ -18,3 +18,19 @@ const HORIZONTAL_DOWN = '┬'
 const HORIZONTAL_UP = '┴'
 const QUOTA_LEFT = '«'
 const QUOTA_RIGHT = '»'
+
+var connectors = map[rune]bool{
+	VERTICAL_LINE:   true,
+	HORIZONTAL_LINE: true,
+}
+
+// [toInsert][above][below][left][right]
+var characterConnectorMap = map[string]rune{
+	// vertical insert
+	"│││─ ": VERTICAL_LEFT,
+	"│││ ─": VERTICAL_RIGHT,
+
+	// horizontal insert
+	"─│ ──": HORIZONTAL_UP,
+	"─ │──": HORIZONTAL_DOWN,
+}

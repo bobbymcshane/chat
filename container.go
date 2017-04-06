@@ -5,6 +5,9 @@ import (
 	//"log"
 )
 
+const focusBorderColor = termbox.ColorGreen
+const defaultBorderColor = termbox.ColorWhite
+
 type Container interface {
 	// return layout implementation struct
 	GetLayout() *Layout
@@ -249,6 +252,7 @@ func (layout *VerticalLayout) Draw(cells [][]termbox.Cell) {
 	}
 
 	dividerX := 0
+	prevFocused := false
 	for _, c := range layout.Children() {
 		cWidth := containerWidth
 		if remainder > 0 {
@@ -257,15 +261,42 @@ func (layout *VerticalLayout) Draw(cells [][]termbox.Cell) {
 			remainder--
 		}
 
+		drawLocation := dividerX
 		if dividerX > 0 {
+			// add one because we are going to draw a divider
+			drawLocation++
+		}
+
+		c.Draw(sliceView(drawLocation, 0, cWidth, viewHeight, cells))
+
+		if dividerX > 0 {
+			fgColor := defaultBorderColor
+			if prevFocused || c.(ContainerNavigator).IsFocused() {
+				fgColor = focusBorderColor
+			}
 			for y := 0; y < viewHeight; y++ {
-				cells[y][dividerX] = termbox.Cell{VERTICAL_LINE, termbox.ColorWhite, termbox.ColorBlack}
+				connector := VERTICAL_LINE
+				left := cells[y][dividerX-1].Ch
+				right := cells[y][dividerX+1].Ch
+				if _, ok := connectors[left]; !ok {
+					left = ' '
+				}
+				if _, ok := connectors[right]; !ok {
+					right = ' '
+				}
+				lookUp := string([]rune{connector, connector, connector, left, right})
+				if toInsert, ok := characterConnectorMap[lookUp]; ok {
+					connector = toInsert
+				}
+				// look to our left and right and draw the appropriate connector piece/focus color
+				// as we draw our divider
+				cells[y][dividerX] = termbox.Cell{connector, fgColor, termbox.ColorBlack}
 			}
 			// add one because we drew a divider
 			dividerX++
 		}
 
-		c.Draw(sliceView(dividerX, 0, cWidth, viewHeight, cells))
+		prevFocused = c.(ContainerNavigator).IsFocused()
 		dividerX += cWidth
 	}
 }
@@ -348,6 +379,7 @@ func (layout *HorizontalLayout) Draw(cells [][]termbox.Cell) {
 	}
 
 	dividerY := 0
+	prevFocused := false
 	for _, c := range layout.Children() {
 		cHeight := containerHeight
 		if remainder > 0 {
@@ -356,14 +388,42 @@ func (layout *HorizontalLayout) Draw(cells [][]termbox.Cell) {
 			remainder--
 		}
 
+		drawLocation := dividerY
 		if dividerY > 0 {
+			// add one because we are going to draw a divider
+			drawLocation++
+		}
+
+		c.Draw(sliceView(0, drawLocation, viewWidth, cHeight, cells))
+
+		if dividerY > 0 {
+			fgColor := defaultBorderColor
+			if prevFocused || c.(ContainerNavigator).IsFocused() {
+				fgColor = focusBorderColor
+			}
 			for x := 0; x < viewWidth; x++ {
-				cells[dividerY][x] = termbox.Cell{HORIZONTAL_LINE, termbox.ColorWhite, termbox.ColorBlack}
+				connector := HORIZONTAL_LINE
+				above := cells[dividerY-1][x].Ch
+				below := cells[dividerY+1][x].Ch
+				if _, ok := connectors[above]; !ok {
+					above = ' '
+				}
+				if _, ok := connectors[below]; !ok {
+					below = ' '
+				}
+				lookUp := string([]rune{connector, above, below, connector, connector})
+				if toInsert, ok := characterConnectorMap[lookUp]; ok {
+					connector = toInsert
+				}
+				// look to our left and right and draw the appropriate connector piece/focus color
+				// as we draw our divider
+				cells[dividerY][x] = termbox.Cell{connector, fgColor, termbox.ColorBlack}
 			}
 			// add one because we drew a divider
 			dividerY++
 		}
-		c.Draw(sliceView(0, dividerY, viewWidth, cHeight, cells))
+
+		prevFocused = c.(ContainerNavigator).IsFocused()
 		dividerY += cHeight
 	}
 }
