@@ -108,6 +108,11 @@ func (layout *Layout) Remove(c Container) {
 func (layout *Layout) Delete() {
 	if parent := layout.Parent(); parent != nil {
 		parent.Remove(layout)
+		if children := parent.Children(); parent.Parent() != nil && len(children) == 1 {
+			newParent := children[0]
+			newParent.SetParent(parent.Parent())
+			parent.Overwrite(newParent)
+		}
 	}
 }
 
