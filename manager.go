@@ -10,6 +10,7 @@ const (
 	unspecified = iota
 	horizontal  = iota
 	vertical    = iota
+	text        = iota
 )
 
 type direction int
@@ -106,7 +107,10 @@ func (manager *Manager) newContainer(o orientation) {
 	}
 	for i := 0; i < numContainers; i++ {
 		var newContainer ContainerNavigator
-		if o == horizontal {
+		if o == text {
+			numContainers = 1
+			newContainer = NewTextLayout()
+		} else if o == horizontal {
 			newContainer = &HorizontalLayout{&Layout{}}
 		} else {
 			newContainer = &VerticalLayout{&Layout{}}
@@ -201,6 +205,8 @@ func main() {
 				}
 			case 'c':
 				manager.newContainer(vertical)
+			case 't':
+				manager.newContainer(text)
 			case 'i':
 				manager.Focus(in)
 			case 'o':

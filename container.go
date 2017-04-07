@@ -470,3 +470,39 @@ func (layout *HorizontalLayout) RightContainer(c Container) Container {
 	// look for a container right of this one
 	return layout.Right()
 }
+
+type TextLayout struct {
+	*Layout
+	lines []string
+}
+
+func NewTextLayout(reader *Reader) *TextLayout {
+	return &TextLayout{&Layout{}, []string{"This is a test"}}
+}
+
+func (layout *TextLayout) Append(c Container) {
+	panic("cannot append to text container")
+}
+
+func (layout *TextLayout) Draw(cells [][]termbox.Cell) {
+	var visibleLines []string
+	if len(layout.lines) > len(cells) {
+		visibleLines = layout.lines[len(layout.lines)-len(cells) : len(cells)]
+	} else {
+		visibleLines = layout.lines
+	}
+
+	for i, line := range cells {
+		if i >= len(visibleLines) {
+			break
+		}
+
+		for j := range line {
+			if j >= len(visibleLines[i]) {
+				break
+			}
+			cells[i][j] = termbox.Cell{rune(visibleLines[i][j]), termbox.ColorWhite, termbox.ColorBlack}
+		}
+
+	}
+}
