@@ -476,7 +476,7 @@ type TextLayout struct {
 	lines []string
 }
 
-func NewTextLayout(reader *Reader) *TextLayout {
+func NewTextLayout() *TextLayout {
 	return &TextLayout{&Layout{}, []string{"This is a test"}}
 }
 
